@@ -17,14 +17,13 @@ def get_cover_url_of_album(artist_name: str, album_title: str):
         raise TypeError("Артист не найден")
     
     artist: Artist = response.best.result
-        
-    for album in artist.get_albums():
+
+    for album in artist.get_albums(page_size=100):
         if fuzz.WRatio(album.title, album_title) > 92:
             result = album.cover_uri.replace("%%", "600x600")
             break
     else:
         raise TypeError("Альбом не найден")
-    
     return result
                   
 if __name__ == "__main__":
@@ -38,8 +37,8 @@ if __name__ == "__main__":
     with open(os.devnull, "w") as f, contextlib.redirect_stderr(f):
         url = get_cover_url_of_album(args.artist, args.album)
     
-    response = requests.get("https://" + url)
+    cover_response = requests.get("https://" + url)
 
     file_name = f"{sanitize_filename(args.artist, '_')} - {sanitize_filename(args.album, '_')}.jpeg"
     with open(Path.home() / "Загрузки" / file_name, 'wb') as file:
-        file.write(response.content)
+        file.write(cover_response.content)
