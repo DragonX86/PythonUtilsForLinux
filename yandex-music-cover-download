@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+import requests
+from fuzzywuzzy import fuzz
+from pathvalidate import sanitize_filename
+from yandex_music import Client
+from yandex_music.artist.artist import Artist
+
+
+def get_cover_url_of_album(artist_name: str, album_title: str):
+    response = Client().search(artist_name.replace('/', '_'))
+    
+    if response.best and response.best.type != 'artist':
+        raise TypeError("Артист не найден")
+    
+    artist: Artist = response.best.result
+        
+    for album in artist.get_albums():
+        if fuzz.WRatio(album.title, album_title) > 92:
+            result = album.cover_uri.replace("%%", "600x600")
+            break
+    else:
+        raise TypeError("Альбом не найден")
+    
+    return result
+                  
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('artist', type=str, help='Input artist name')
+    parser.add_argument('album', type=str, help='Input album title')
+    
+    args = parser.parse_args()
+
+    url = get_cover_url_of_album(args.artist, args.album)
+
+    response = requests.get("https://" + url)
+
+    file_name = f"{sanitize_filename(args.artist, '_')} - {sanitize_filename(args.album, '_')}.jpeg"
+    with open(Path.home() / "Загрузки" / file_name, 'wb') as file:
+        file.write(response.content)
